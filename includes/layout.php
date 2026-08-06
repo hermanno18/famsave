@@ -10,7 +10,7 @@ function page_start(string $title, string $active = ''): void {
         "SELECT * FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 20",
         [$user['id']]
     ) : [];
-    $unread   = count(array_filter($notifs, fn($n) => !$n['is_read']));
+    $unread   = $user ? unread_count((int)$user['id']) : 0;
     $flash    = get_flash();
     $is_admin = $user && $user['role'] === 'admin';
     $lang     = $_SESSION['lang'] ?? 'en';
@@ -106,12 +106,16 @@ tailwind.config = {
     <?php if (empty($notifs)): ?>
     <li class="px-4 py-6 text-center text-sm text-slate-400"><?= t('no_notifications') ?></li>
     <?php else: foreach ($notifs as $n): ?>
-    <li class="px-4 py-3 flex gap-3 items-start <?= !$n['is_read'] ? 'bg-teal-50' : '' ?>">
-      <span class="mt-0.5 w-2 h-2 rounded-full flex-shrink-0 <?= !$n['is_read'] ? 'bg-primary' : 'bg-slate-200' ?>"></span>
-      <div>
-        <p class="text-sm"><?= htmlspecialchars($n['message']) ?></p>
-        <p class="text-xs text-slate-400 mt-0.5"><?= fmt_date($n['created_at']) ?></p>
-      </div>
+    <?php $tag = $n['link'] ? 'a' : 'div'; ?>
+    <li class="<?= !$n['is_read'] ? 'bg-teal-50' : '' ?>">
+      <<?= $tag ?> <?= $n['link'] ? 'href="' . APP_URL . htmlspecialchars($n['link']) . '"' : '' ?>
+         class="px-4 py-3 flex gap-3 items-start <?= $n['link'] ? 'hover:bg-slate-50 cursor-pointer' : '' ?>">
+        <span class="mt-0.5 w-2 h-2 rounded-full flex-shrink-0 <?= !$n['is_read'] ? 'bg-primary' : 'bg-slate-200' ?>"></span>
+        <div>
+          <p class="text-sm"><?= htmlspecialchars($n['message']) ?></p>
+          <p class="text-xs text-slate-400 mt-0.5"><?= fmt_date($n['created_at']) ?></p>
+        </div>
+      </<?= $tag ?>>
     </li>
     <?php endforeach; endif; ?>
   </ul>
@@ -213,9 +217,9 @@ function appShell() {
       }
     },
     markRead() {
-      fetch('<?= APP_URL ?>/api/action.php?action=mark_read', {method:'POST',
+      fetch('<?= APP_URL ?>/api/action.php', {method:'POST',
         headers:{'X-Requested-With':'XMLHttpRequest'},
-        body: new URLSearchParams({csrf:'<?= csrf_token() ?>'})
+        body: new URLSearchParams({csrf:'<?= csrf_token() ?>', action:'mark_read'})
       });
       document.querySelectorAll('.bg-teal-50').forEach(el => el.classList.remove('bg-teal-50'));
       document.querySelectorAll('.bg-primary').forEach(el => {
