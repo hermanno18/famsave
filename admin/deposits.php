@@ -6,12 +6,21 @@ $allowed = ['pending', 'approved', 'rejected', 'all'];
 if (!in_array($filter, $allowed)) $filter = 'pending';
 
 $where = $filter === 'all' ? '' : "AND t.status = '$filter'";
+
+$total = (int) db_val("
+    SELECT COUNT(*) FROM transactions t
+     WHERE t.type = 'deposit' $where
+");
+$page   = current_page();
+$offset = ($page - 1) * PAGE_SIZE;
+
 $txs = db_rows("
     SELECT t.*, u.full_name, u.username
       FROM transactions t
       JOIN users u ON u.id = t.user_id
      WHERE t.type = 'deposit' $where
      ORDER BY t.id DESC
+     LIMIT " . PAGE_SIZE . " OFFSET $offset
 ");
 
 page_start(t('nav_deposits'), 'deposits');
@@ -114,6 +123,7 @@ page_start(t('nav_deposits'), 'deposits');
     </div>
     <?php endforeach; ?>
   </div>
+  <?php render_pager($page, $total); ?>
   <?php endif; ?>
 </div>
 

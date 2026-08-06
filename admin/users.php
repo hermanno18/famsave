@@ -27,7 +27,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
     redirect('/admin/users.php');
 }
 
-$members = db_rows("SELECT * FROM users WHERE role='member' ORDER BY full_name");
+$page          = current_page();
+$total_members = (int) db_val("SELECT COUNT(*) FROM users WHERE role='member'");
+$members       = db_rows("
+    SELECT * FROM users WHERE role='member' ORDER BY full_name
+    LIMIT " . PAGE_SIZE . " OFFSET " . (($page - 1) * PAGE_SIZE)
+);
 
 page_start(t('nav_users'), 'users');
 ?>
@@ -146,6 +151,7 @@ page_start(t('nav_users'), 'users');
     </div>
     <?php endif; ?>
   </div>
+  <?php render_pager($page, $total_members); ?>
 </div>
 
 <script>

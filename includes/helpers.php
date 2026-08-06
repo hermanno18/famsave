@@ -92,6 +92,44 @@ function handle_upload(string $field): ?string {
     return $name;
 }
 
+// ── Pagination ───────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 20;
+
+function current_page(): int {
+    return max(1, (int) ($_GET['page'] ?? 1));
+}
+
+/** Renders a Prev/Next pager, preserving any other query params (e.g. status filter). */
+function render_pager(int $page, int $total_items, int $page_size = PAGE_SIZE): void {
+    $total_pages = (int) ceil($total_items / $page_size);
+    if ($total_pages <= 1) return;
+    $base = $_GET;
+    $prev_href = '?' . http_build_query(['page' => $page - 1] + $base);
+    $next_href = '?' . http_build_query(['page' => $page + 1] + $base);
+    ?>
+    <div class="flex items-center justify-between pt-1">
+      <?php if ($page > 1): ?>
+      <a href="<?= htmlspecialchars($prev_href) ?>"
+         class="text-xs font-semibold bg-white border border-slate-200 text-slate-600
+                px-4 py-2 rounded-lg hover:border-primary hover:text-primary transition">&larr; Prev</a>
+      <?php else: ?>
+      <span class="text-xs font-semibold text-slate-300 px-4 py-2">&larr; Prev</span>
+      <?php endif; ?>
+
+      <span class="text-xs text-slate-400">Page <?= $page ?> of <?= $total_pages ?></span>
+
+      <?php if ($page < $total_pages): ?>
+      <a href="<?= htmlspecialchars($next_href) ?>"
+         class="text-xs font-semibold bg-white border border-slate-200 text-slate-600
+                px-4 py-2 rounded-lg hover:border-primary hover:text-primary transition">Next &rarr;</a>
+      <?php else: ?>
+      <span class="text-xs font-semibold text-slate-300 px-4 py-2">Next &rarr;</span>
+      <?php endif; ?>
+    </div>
+    <?php
+}
+
 // ── JSON response ─────────────────────────────────────────────────────────────
 
 function json_ok(array $data = []): void {
