@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
     $username  = trim($_POST['username'] ?? '');
     $full_name = trim($_POST['full_name'] ?? '');
     $phone     = trim($_POST['phone'] ?? '');
-    $password  = $_POST['password'] ?? 'Temp1234!';
+    $password  = trim($_POST['password'] ?? '') ?: generate_temp_password();
 
     if (!$username || !$full_name) {
         flash('error', 'Username and full name are required.');
@@ -18,10 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
             flash('error', 'Username already taken.');
         } else {
             db_run(
-                "INSERT INTO users (username,full_name,phone,password,role) VALUES (?,?,?,?,?)",
+                "INSERT INTO users (username,full_name,phone,password,role,must_change_password) VALUES (?,?,?,?,?,1)",
                 [$username, $full_name, $phone, password_hash($password, PASSWORD_BCRYPT), 'member']
             );
-            flash('success', t('user_created') . " Password: $password");
+            flash('success', t('user_created') . " Temp password: $password (they'll be asked to change it on first login)");
         }
     }
     redirect('/admin/users.php');
@@ -78,7 +78,8 @@ page_start(t('nav_users'), 'users');
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-500 mb-1"><?= t('password') ?></label>
-            <input type="text" name="password" value="Temp1234!"
+            <input type="text" name="password"
+                   placeholder="Leave blank to auto-generate"
                    class="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200
                           focus:outline-none focus:ring-2 focus:ring-primary bg-slate-50">
           </div>
@@ -166,7 +167,7 @@ function userAction(id, csrf) {
         body: new URLSearchParams({ csrf, action:'reset_password', id })
       });
       const d = await r.json();
-      if (d.ok) alert('<?= t('password_reset_done') ?>');
+      if (d.ok) alert('New temp password: ' + d.temp_password + '\n\nThey will be asked to change it on next login.');
       else alert(d.error);
     }
   }

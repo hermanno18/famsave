@@ -16,6 +16,7 @@ function get_db(): PDO {
     $pdo->exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');
 
     _create_schema($pdo);
+    _migrate_schema($pdo);
     return $pdo;
 }
 
@@ -29,7 +30,15 @@ function _create_schema(PDO $db): void {
             password    TEXT    NOT NULL,
             role        TEXT    NOT NULL DEFAULT 'member',
             is_active   INTEGER NOT NULL DEFAULT 1,
+            must_change_password INTEGER NOT NULL DEFAULT 0,
             created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS login_attempts (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            username     TEXT    NOT NULL,
+            ip           TEXT,
+            created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
         );
 
         CREATE TABLE IF NOT EXISTS transactions (
@@ -73,6 +82,38 @@ function _create_schema(PDO $db): void {
         $db->prepare("INSERT INTO users (username,full_name,password,role) VALUES (?,?,?,?)")
            ->execute(['admin', 'Administrator', $hash, 'admin']);
     }
+}
+
+/** Adds columns to pre-existing DBs that predate a schema change (SQLite has no IF NOT EXISTS on ALTER). */
+function _migrate_schema(PDO $db): void {
+    $cols = array_column($db->query("PRAGMA table_info(users)")->fetchAll(), 'name');
+    if (!in_array('must_change_password', $cols, true)) {
+        $db->exec("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0");
+    }
+}
+
+// ── Login rate limiting ──────────────────────────────────────────────────────────
+
+const LOGIN_MAX_ATTEMPTS   = 5;
+const LOGIN_LOCKOUT_SECS   = 900; // 15 minutes
+
+/** True if this username has hit the failed-attempt ceiling within the lockout window. */
+function is_login_locked(string $username): bool {
+    $count = (int) db_val(
+        "SELECT COUNT(*) FROM login_attempts
+          WHERE username=? AND created_at > datetime('now', ?)",
+        [$username, '-' . LOGIN_LOCKOUT_SECS . ' seconds']
+    );
+    return $count >= LOGIN_MAX_ATTEMPTS;
+}
+
+function record_failed_login(string $username): void {
+    db_run("INSERT INTO login_attempts (username, ip) VALUES (?,?)",
+           [$username, $_SERVER['REMOTE_ADDR'] ?? '']);
+}
+
+function clear_login_attempts(string $username): void {
+    db_run("DELETE FROM login_attempts WHERE username=?", [$username]);
 }
 
 // ── Query helpers ──────────────────────────────────────────────────────────────

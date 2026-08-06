@@ -27,7 +27,7 @@ function redirect(string $path): void {
 // ── Formatting ────────────────────────────────────────────────────────────────
 
 function fmt_money(int $amount): string {
-    return number_format($amount, 0, '.', ' ') . ' XAF';
+    return number_format($amount, 0, '.', ' ') . ' ' . CURRENCY;
 }
 
 function fmt_date(string $dt): string {
@@ -44,6 +44,18 @@ function fmt_status_badge(string $status): string {
     $cls   = $map[$status] ?? 'bg-gray-100 text-gray-600';
     $label = t('status_' . $status);
     return "<span class=\"inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold $cls\">$label</span>";
+}
+
+// ── Passwords ──────────────────────────────────────────────────────────────
+
+/** Cryptographically random temp password, no ambiguous chars (0/O, 1/l/I). */
+function generate_temp_password(int $length = 10): string {
+    $chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    $pw = '';
+    for ($i = 0; $i < $length; $i++) {
+        $pw .= $chars[random_int(0, strlen($chars) - 1)];
+    }
+    return $pw;
 }
 
 // ── File uploads ──────────────────────────────────────────────────────────────

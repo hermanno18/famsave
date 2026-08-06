@@ -9,7 +9,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    if (login_user($username, $password)) {
+    if ($username !== '' && is_login_locked($username)) {
+        $error = t('too_many_attempts');
+    } elseif (login_user($username, $password)) {
         $u = current_user();
         redirect($u['role'] === 'admin' ? '/admin/index.php' : '/dashboard.php');
     } else {

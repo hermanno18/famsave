@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'passw
     } elseif (strlen($new) < 8) {
         flash('error', 'New password must be at least 8 characters.');
     } else {
-        db_run("UPDATE users SET password=? WHERE id=?",
+        db_run("UPDATE users SET password=?, must_change_password=0 WHERE id=?",
                [password_hash($new, PASSWORD_BCRYPT), $user['id']]);
         flash('success', t('password_changed'));
     }

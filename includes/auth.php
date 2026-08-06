@@ -14,6 +14,13 @@ function require_login(): array {
         flash('error', t('please_login'));
         redirect('/login.php');
     }
+    if (!empty($user['must_change_password'])) {
+        $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
+        if (!in_array($current, ['profile.php', 'logout.php'], true)) {
+            flash('error', t('must_change_password'));
+            redirect('/profile.php');
+        }
+    }
     return $user;
 }
 
@@ -28,8 +35,12 @@ function require_admin(): array {
 
 function login_user(string $username, string $password): bool {
     $user = db_row("SELECT * FROM users WHERE username=? AND is_active=1", [$username]);
-    if (!$user || !password_verify($password, $user['password'])) return false;
+    if (!$user || !password_verify($password, $user['password'])) {
+        record_failed_login($username);
+        return false;
+    }
 
+    clear_login_attempts($username);
     session_regenerate_id(true);
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['csrf']    = bin2hex(random_bytes(16));

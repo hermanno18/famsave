@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $note   = trim($_POST['note'] ?? '');
 
     if ($amount < 100) {
-        flash('error', 'Minimum amount is 100 XAF.');
+        flash('error', 'Minimum amount is 100 ' . CURRENCY . '.');
         redirect('/withdraw.php');
     }
     if ($amount > $balance) {

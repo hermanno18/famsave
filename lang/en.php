@@ -20,6 +20,8 @@ function t(string $key): string {
         'access_denied'     => 'Access denied.',
         'invalid_creds'     => 'Invalid username or password.',
         'account_inactive'  => 'Your account is inactive. Contact the admin.',
+        'too_many_attempts' => 'Too many failed attempts. Please wait 15 minutes and try again.',
+        'must_change_password' => 'Please choose a new password before continuing.',
         // Status
         'status_pending'    => 'Pending',
         'status_approved'   => 'Approved',
@@ -96,7 +98,7 @@ function t(string $key): string {
         'inactive'          => 'Inactive',
         'toggle_status'     => 'Toggle',
         'reset_password'    => 'Reset Password',
-        'password_reset_done'=> 'Password reset to Temp1234!',
+        'password_reset_done'=> 'Password reset successfully.',
         'member_since'      => 'Member since',
     ];
     return $strings[$key] ?? $key;

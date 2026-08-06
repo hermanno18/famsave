@@ -87,8 +87,8 @@ if ($action === 'reset_password') {
     $member = db_row("SELECT * FROM users WHERE id=? AND role='member'", [$id]);
     if (!$member) json_err('Member not found');
 
-    $temp = 'Temp1234!';
-    db_run("UPDATE users SET password=? WHERE id=?",
+    $temp = generate_temp_password();
+    db_run("UPDATE users SET password=?, must_change_password=1 WHERE id=?",
            [password_hash($temp, PASSWORD_BCRYPT), $id]);
     json_ok(['temp_password' => $temp]);
 }

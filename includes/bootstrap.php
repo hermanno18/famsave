@@ -7,6 +7,7 @@
 define('BASE_PATH', dirname(__DIR__));
 define('DATA_PATH', BASE_PATH . '/data');
 define('UPLOAD_PATH', BASE_PATH . '/uploads');
+define('CURRENCY', 'XAF');
 
 // Detect app URL prefix (works for root installs AND subfolders like /famsave).
 // Strategy: count how deep current script is below BASE_PATH, then strip that
@@ -21,10 +22,14 @@ define('APP_URL', $_app_parts ? '/' . implode('/', $_app_parts) : '');
 unset($_script_real, $_base_real, $_relative, $_depth, $_parts, $_app_parts);
 
 if (session_status() === PHP_SESSION_NONE) {
+    $_is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                 || ($_SERVER['SERVER_PORT'] ?? '') === '443';
     session_start([
         'cookie_httponly' => true,
         'cookie_samesite' => 'Lax',
+        'cookie_secure'   => $_is_https,
     ]);
+    unset($_is_https);
 }
 
 require_once BASE_PATH . '/includes/db.php';
