@@ -28,10 +28,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
 }
 
 $page          = current_page();
-$total_members = (int) db_val("SELECT COUNT(*) FROM users WHERE role='member'");
+$q             = current_search();
+$where         = '';
+$params        = [];
+if ($q !== '') {
+    $where  = "AND (full_name LIKE ? OR username LIKE ? OR phone LIKE ?)";
+    $like   = '%' . $q . '%';
+    $params = [$like, $like, $like];
+}
+$total_members = (int) db_val("SELECT COUNT(*) FROM users WHERE role='member' $where", $params);
 $members       = db_rows("
-    SELECT * FROM users WHERE role='member' ORDER BY full_name
-    LIMIT " . PAGE_SIZE . " OFFSET " . (($page - 1) * PAGE_SIZE)
+    SELECT * FROM users WHERE role='member' $where ORDER BY full_name
+    LIMIT " . PAGE_SIZE . " OFFSET " . (($page - 1) * PAGE_SIZE),
+    $params
 );
 
 page_start(t('nav_users'), 'users');
@@ -99,6 +108,8 @@ page_start(t('nav_users'), 'users');
     </div>
   </div>
 
+  <?php render_search_box($q, 'Search by name, username, or phone...'); ?>
+
   <!-- Members list -->
   <div class="space-y-3">
     <?php foreach ($members as $m): ?>
@@ -147,7 +158,7 @@ page_start(t('nav_users'), 'users');
 
     <?php if (empty($members)): ?>
     <div class="bg-white rounded-2xl p-8 text-center text-slate-400 text-sm shadow-sm">
-      No members yet. Create one above!
+      <?= $q !== '' ? 'No members match your search.' : 'No members yet. Create one above!' ?>
     </div>
     <?php endif; ?>
   </div>

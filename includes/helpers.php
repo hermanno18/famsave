@@ -92,6 +92,37 @@ function handle_upload(string $field): ?string {
     return $name;
 }
 
+// ── Search ───────────────────────────────────────────────────────────
+
+function current_search(): string {
+    return trim($_GET['q'] ?? '');
+}
+
+/** Renders a GET search box; preserves every other query param (e.g. status filter) except 'q' and 'page'. */
+function render_search_box(string $q, string $placeholder = 'Search...'): void {
+    $hidden = $_GET;
+    unset($hidden['q'], $hidden['page']);
+    ?>
+    <form method="GET" action="" class="flex gap-2">
+      <?php foreach ($hidden as $k => $v): ?>
+      <input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars($v) ?>">
+      <?php endforeach; ?>
+      <input type="text" name="q" value="<?= htmlspecialchars($q) ?>" placeholder="<?= htmlspecialchars($placeholder) ?>"
+             class="flex-1 px-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-white
+                    focus:outline-none focus:ring-2 focus:ring-primary">
+      <button type="submit"
+              class="bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2.5
+                     rounded-xl transition active:scale-95">
+        Search
+      </button>
+      <?php if ($q !== ''): ?>
+      <a href="?<?= htmlspecialchars(http_build_query($hidden)) ?>"
+         class="text-xs text-slate-400 self-center flex-shrink-0 hover:text-slate-600">Clear</a>
+      <?php endif; ?>
+    </form>
+    <?php
+}
+
 // ── Pagination ───────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 20;

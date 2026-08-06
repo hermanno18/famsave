@@ -6,11 +6,19 @@ $allowed = ['pending', 'approved', 'rejected', 'all'];
 if (!in_array($filter, $allowed)) $filter = 'pending';
 
 $where = $filter === 'all' ? '' : "AND t.status = '$filter'";
+$q = current_search();
+$params = [];
+if ($q !== '') {
+    $where .= " AND (u.full_name LIKE ? OR u.username LIKE ? OR t.note LIKE ?)";
+    $like = '%' . $q . '%';
+    $params = [$like, $like, $like];
+}
 
 $total = (int) db_val("
     SELECT COUNT(*) FROM transactions t
+      JOIN users u ON u.id = t.user_id
      WHERE t.type = 'deposit' $where
-");
+", $params);
 $page   = current_page();
 $offset = ($page - 1) * PAGE_SIZE;
 
@@ -21,7 +29,7 @@ $txs = db_rows("
      WHERE t.type = 'deposit' $where
      ORDER BY t.id DESC
      LIMIT " . PAGE_SIZE . " OFFSET $offset
-");
+", $params);
 
 page_start(t('nav_deposits'), 'deposits');
 ?>
@@ -31,14 +39,20 @@ page_start(t('nav_deposits'), 'deposits');
 
   <!-- Filter tabs -->
   <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-    <?php foreach (['pending'=>'Pending','approved'=>'Approved','rejected'=>'Rejected','all'=>'All'] as $s=>$label): ?>
-    <a href="?status=<?= $s ?>"
+    <?php
+    $tab_params = $_GET;
+    unset($tab_params['status'], $tab_params['page']);
+    foreach (['pending'=>'Pending','approved'=>'Approved','rejected'=>'Rejected','all'=>'All'] as $s=>$label):
+    ?>
+    <a href="?<?= htmlspecialchars(http_build_query(['status' => $s] + $tab_params)) ?>"
        class="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition
               <?= $filter===$s ? 'bg-primary text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-primary' ?>">
       <?= $label ?>
     </a>
     <?php endforeach; ?>
   </div>
+
+  <?php render_search_box($q, 'Search by name or note...'); ?>
 
   <!-- Transaction cards -->
   <?php if (empty($txs)): ?>
