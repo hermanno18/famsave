@@ -1,0 +1,32 @@
+# Redirect all requests to index.php except existing files/dirs
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Allow direct access to assets
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+</IfModule>
+
+# Block direct access to sensitive dirs
+<FilesMatch "\.(db|sqlite|sql|log|env|sh|bat)$">
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+
+# Security headers
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# PHP settings (if shared hosting allows)
+<IfModule mod_php.c>
+  php_value upload_max_filesize 6M
+  php_value post_max_size 8M
+  php_value max_execution_time 30
+</IfModule>

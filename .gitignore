@@ -1,0 +1,20 @@
+# Dependencies & runtime
+/data/
+/uploads/*
+!/uploads/.htaccess
+
+# Environment
+.env
+*.env
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Dev helpers
+/generate_icons.php
+
+# Local PHP runtime (portable, downloaded for local dev only)
+/php-runtime/
+/php83.zip
+/php-server.log
