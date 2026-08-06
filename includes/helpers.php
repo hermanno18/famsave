@@ -130,6 +130,29 @@ function render_pager(int $page, int $total_items, int $page_size = PAGE_SIZE): 
     <?php
 }
 
+// ── Savings goal ───────────────────────────────────────────────────────────
+
+/** Renders a progress card for the active savings goal against $current_amount. Silent no-op if $goal is null. */
+function render_goal_progress(?array $goal, int $current_amount): void {
+    if (!$goal) return;
+    $target  = (int) $goal['target_amount'];
+    $pct     = $target > 0 ? min(100, (int) round($current_amount / $target * 100)) : 0;
+    ?>
+    <div class="bg-white rounded-2xl shadow-sm p-4">
+      <div class="flex items-center justify-between mb-2">
+        <p class="font-semibold text-slate-700 text-sm"><?= htmlspecialchars($goal['title']) ?></p>
+        <p class="text-xs font-bold text-primary"><?= $pct ?>%</p>
+      </div>
+      <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <div class="h-full bg-primary rounded-full transition-all" style="width: <?= $pct ?>%"></div>
+      </div>
+      <p class="text-xs text-slate-400 mt-1.5">
+        <?= fmt_money($current_amount) ?> of <?= fmt_money($target) ?>
+      </p>
+    </div>
+    <?php
+}
+
 // ── JSON response ─────────────────────────────────────────────────────────────
 
 function json_ok(array $data = []): void {

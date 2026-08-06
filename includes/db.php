@@ -73,6 +73,15 @@ function _create_schema(PDO $db): void {
             is_read      INTEGER NOT NULL DEFAULT 0,
             created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS savings_goals (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            title         TEXT    NOT NULL,
+            target_amount INTEGER NOT NULL CHECK(target_amount > 0),
+            is_active     INTEGER NOT NULL DEFAULT 1,
+            created_by    INTEGER NOT NULL REFERENCES users(id),
+            created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+        );
     ");
 
     // Seed admin user if none exists
@@ -157,6 +166,23 @@ function user_balance(int $user_id): int {
 /** Returns the latest main account balance logged by admin. */
 function main_balance(): int {
     return (int) db_val("SELECT COALESCE(amount,0) FROM balance_logs ORDER BY id DESC LIMIT 1");
+}
+
+/** Returns the current active savings goal, or null if none set. */
+function active_goal(): ?array {
+    return db_row("SELECT * FROM savings_goals WHERE is_active=1 ORDER BY id DESC LIMIT 1");
+}
+
+/** Deactivates any existing goal and creates a new active one. */
+function set_savings_goal(string $title, int $target_amount, int $created_by): void {
+    db_run("UPDATE savings_goals SET is_active=0 WHERE is_active=1");
+    db_run("INSERT INTO savings_goals (title,target_amount,created_by) VALUES (?,?,?)",
+           [$title, $target_amount, $created_by]);
+}
+
+/** Clears the active goal (no goal currently tracked). */
+function clear_savings_goal(): void {
+    db_run("UPDATE savings_goals SET is_active=0 WHERE is_active=1");
 }
 
 /** Push a notification to a user. */

@@ -4,6 +4,8 @@ $user = require_login();
 
 $balance    = user_balance((int)$user['id']);
 $main_bal   = main_balance();
+$goal       = active_goal();
+$balance_logs = db_rows("SELECT * FROM balance_logs ORDER BY id DESC LIMIT 20");
 $recent_txs = db_rows(
     "SELECT * FROM transactions WHERE user_id=? ORDER BY id DESC LIMIT 5",
     [$user['id']]
@@ -48,6 +50,18 @@ page_start(t('nav_home'), 'home');
       </div>
     </div>
   </div>
+
+  <?php render_goal_progress($goal, $main_bal); ?>
+
+  <!-- Family balance trend -->
+  <?php if (count($balance_logs) >= 2): ?>
+  <div class="bg-white rounded-2xl shadow-sm p-4">
+    <p class="font-semibold text-slate-700 text-sm mb-3">Family Balance Trend</p>
+    <div style="height: 180px;">
+      <canvas id="familyBalanceChart"></canvas>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <!-- Main account balance (read-only for members) -->
   <div class="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4">
@@ -106,5 +120,32 @@ page_start(t('nav_home'), 'home');
   </div>
 
 </div>
+
+<?php if (count($balance_logs) >= 2): ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+new Chart(document.getElementById('familyBalanceChart'), {
+  type: 'line',
+  data: {
+    labels: <?= json_encode(array_map(fn($l) => date('d M', strtotime($l['created_at'])), array_reverse($balance_logs))) ?>,
+    datasets: [{
+      label: 'Balance (<?= CURRENCY ?>)',
+      data: <?= json_encode(array_map(fn($l) => (int)$l['amount'], array_reverse($balance_logs))) ?>,
+      borderColor: '#0f766e',
+      backgroundColor: 'rgba(15,118,110,0.1)',
+      tension: 0.3,
+      fill: true,
+      pointRadius: 3,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true } }
+  }
+});
+</script>
+<?php endif; ?>
 
 <?php page_end('home'); ?>

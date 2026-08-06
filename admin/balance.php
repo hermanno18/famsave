@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/bootstrap.php';
 $admin = require_admin();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? 'update_balance') === 'update_balance') {
     verify_csrf();
     $amount = (int) ($_POST['amount'] ?? 0);
     $note   = trim($_POST['note'] ?? '');
@@ -29,7 +29,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('/admin/balance.php');
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === 'set_goal') {
+    verify_csrf();
+    $title  = trim($_POST['goal_title'] ?? '');
+    $target = (int) ($_POST['goal_target'] ?? 0);
+
+    if ($title === '' || $target <= 0) {
+        flash('error', 'Goal needs a title and a target amount above zero.');
+    } else {
+        set_savings_goal($title, $target, $admin['id']);
+        flash('success', 'Savings goal set!');
+    }
+    redirect('/admin/balance.php');
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === 'clear_goal') {
+    verify_csrf();
+    clear_savings_goal();
+    flash('success', 'Savings goal cleared.');
+    redirect('/admin/balance.php');
+}
+
 $current = main_balance();
+$goal    = active_goal();
 $logs    = db_rows("SELECT b.*, u.full_name FROM balance_logs b JOIN users u ON u.id=b.logged_by ORDER BY b.id DESC LIMIT 20");
 
 page_start(t('nav_balance'), 'balance');
@@ -43,6 +65,50 @@ page_start(t('nav_balance'), 'balance');
     <p class="text-amber-100 text-sm mb-1">Current Logged Balance</p>
     <p class="text-4xl font-extrabold" data-countup="<?= $current ?>"><?= fmt_money($current) ?></p>
     <p class="text-amber-200 text-xs mt-2">Mirrors your actual bank account</p>
+  </div>
+
+  <?php render_goal_progress($goal, $current); ?>
+
+  <!-- Goal form -->
+  <div class="bg-white rounded-2xl shadow-sm p-5">
+    <p class="font-semibold text-slate-700 text-sm mb-4">
+      <?= $goal ? 'Update Savings Goal' : 'Set a Savings Goal' ?>
+    </p>
+    <form method="POST" action="" class="space-y-3">
+      <?= csrf_input() ?>
+      <input type="hidden" name="form_action" value="set_goal">
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Goal Title</label>
+        <input type="text" name="goal_title" required maxlength="80"
+               value="<?= $goal ? htmlspecialchars($goal['title']) : '' ?>"
+               placeholder="e.g. Family Vacation 2027"
+               class="w-full px-4 py-2.5 rounded-xl border border-slate-200
+                      focus:outline-none focus:ring-2 focus:ring-primary text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Target Amount (<?= CURRENCY ?>)</label>
+        <input type="number" name="goal_target" min="1" required
+               value="<?= $goal ? (int)$goal['target_amount'] : '' ?>"
+               class="w-full px-4 py-2.5 rounded-xl border border-slate-200
+                      focus:outline-none focus:ring-2 focus:ring-primary text-sm font-semibold">
+      </div>
+      <button type="submit"
+              class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2.5 rounded-xl
+                     transition active:scale-95 text-sm">
+        <?= $goal ? 'Update Goal' : 'Set Goal' ?>
+      </button>
+    </form>
+    <?php if ($goal): ?>
+    <form method="POST" action="" class="mt-2">
+      <?= csrf_input() ?>
+      <input type="hidden" name="form_action" value="clear_goal">
+      <button type="submit"
+              class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl
+                     transition active:scale-95 text-sm">
+        Clear Goal
+      </button>
+    </form>
+    <?php endif; ?>
   </div>
 
   <!-- Update form -->
@@ -99,6 +165,16 @@ page_start(t('nav_balance'), 'balance');
     </form>
   </div>
 
+  <!-- Balance trend chart -->
+  <?php if (count($logs) >= 2): ?>
+  <div class="bg-white rounded-2xl shadow-sm p-4">
+    <p class="font-semibold text-slate-700 text-sm mb-3">Balance Trend</p>
+    <div style="height: 220px;">
+      <canvas id="balanceChart"></canvas>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <!-- Balance history -->
   <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
     <div class="px-4 py-3 border-b border-slate-100">
@@ -130,5 +206,32 @@ page_start(t('nav_balance'), 'balance');
     <?php endif; ?>
   </div>
 </div>
+
+<?php if (count($logs) >= 2): ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+new Chart(document.getElementById('balanceChart'), {
+  type: 'line',
+  data: {
+    labels: <?= json_encode(array_map(fn($l) => date('d M', strtotime($l['created_at'])), array_reverse($logs))) ?>,
+    datasets: [{
+      label: 'Balance (<?= CURRENCY ?>)',
+      data: <?= json_encode(array_map(fn($l) => (int)$l['amount'], array_reverse($logs))) ?>,
+      borderColor: '#0f766e',
+      backgroundColor: 'rgba(15,118,110,0.1)',
+      tension: 0.3,
+      fill: true,
+      pointRadius: 3,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true } }
+  }
+});
+</script>
+<?php endif; ?>
 
 <?php page_end('balance'); ?>
