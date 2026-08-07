@@ -79,6 +79,7 @@ function _create_schema(PDO $db): void {
             title         TEXT    NOT NULL,
             target_amount INTEGER NOT NULL CHECK(target_amount > 0),
             is_active     INTEGER NOT NULL DEFAULT 1,
+            user_id       INTEGER REFERENCES users(id),
             created_by    INTEGER NOT NULL REFERENCES users(id),
             created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
         );
@@ -98,6 +99,11 @@ function _migrate_schema(PDO $db): void {
     $cols = array_column($db->query("PRAGMA table_info(users)")->fetchAll(), 'name');
     if (!in_array('must_change_password', $cols, true)) {
         $db->exec("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0");
+    }
+
+    $goal_cols = array_column($db->query("PRAGMA table_info(savings_goals)")->fetchAll(), 'name');
+    if (!in_array('user_id', $goal_cols, true)) {
+        $db->exec("ALTER TABLE savings_goals ADD COLUMN user_id INTEGER REFERENCES users(id)");
     }
 }
 
@@ -168,21 +174,37 @@ function main_balance(): int {
     return (int) db_val("SELECT COALESCE(amount,0) FROM balance_logs ORDER BY id DESC LIMIT 1");
 }
 
-/** Returns the current active savings goal, or null if none set. */
+/** Returns the current active FAMILY-WIDE savings goal, or null if none set. */
 function active_goal(): ?array {
-    return db_row("SELECT * FROM savings_goals WHERE is_active=1 ORDER BY id DESC LIMIT 1");
+    return db_row("SELECT * FROM savings_goals WHERE is_active=1 AND user_id IS NULL ORDER BY id DESC LIMIT 1");
 }
 
-/** Deactivates any existing goal and creates a new active one. */
-function set_savings_goal(string $title, int $target_amount, int $created_by): void {
-    db_run("UPDATE savings_goals SET is_active=0 WHERE is_active=1");
-    db_run("INSERT INTO savings_goals (title,target_amount,created_by) VALUES (?,?,?)",
-           [$title, $target_amount, $created_by]);
+/** Returns the current active PERSONAL savings goal for a specific member, or null. */
+function active_goal_for_user(int $user_id): ?array {
+    return db_row("SELECT * FROM savings_goals WHERE is_active=1 AND user_id=? ORDER BY id DESC LIMIT 1", [$user_id]);
 }
 
-/** Clears the active goal (no goal currently tracked). */
-function clear_savings_goal(): void {
-    db_run("UPDATE savings_goals SET is_active=0 WHERE is_active=1");
+/**
+ * Deactivates any existing goal in the same scope and creates a new active one.
+ * $for_user = null means the shared family-wide goal; otherwise a personal goal for that member.
+ */
+function set_savings_goal(string $title, int $target_amount, int $created_by, ?int $for_user = null): void {
+    if ($for_user === null) {
+        db_run("UPDATE savings_goals SET is_active=0 WHERE is_active=1 AND user_id IS NULL");
+    } else {
+        db_run("UPDATE savings_goals SET is_active=0 WHERE is_active=1 AND user_id=?", [$for_user]);
+    }
+    db_run("INSERT INTO savings_goals (title,target_amount,created_by,user_id) VALUES (?,?,?,?)",
+           [$title, $target_amount, $created_by, $for_user]);
+}
+
+/** Clears the active goal in the given scope (family-wide if $for_user is null). */
+function clear_savings_goal(?int $for_user = null): void {
+    if ($for_user === null) {
+        db_run("UPDATE savings_goals SET is_active=0 WHERE is_active=1 AND user_id IS NULL");
+    } else {
+        db_run("UPDATE savings_goals SET is_active=0 WHERE is_active=1 AND user_id=?", [$for_user]);
+    }
 }
 
 /** Push a notification to a user. */

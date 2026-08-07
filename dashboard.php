@@ -5,6 +5,7 @@ $user = require_login();
 $balance    = user_balance((int)$user['id']);
 $main_bal   = main_balance();
 $goal       = active_goal();
+$my_goal    = active_goal_for_user((int)$user['id']);
 $balance_logs = db_rows("SELECT * FROM balance_logs ORDER BY id DESC LIMIT 20");
 $recent_txs = db_rows(
     "SELECT * FROM transactions WHERE user_id=? ORDER BY id DESC LIMIT 5",
@@ -51,7 +52,9 @@ page_start(t('nav_home'), 'home');
     </div>
   </div>
 
-  <?php render_goal_progress($goal, $main_bal); ?>
+  <?php render_goal_progress($my_goal, $balance, 'My Goal'); ?>
+
+  <?php render_goal_progress($goal, $main_bal, 'Family Goal'); ?>
 
   <!-- Family balance trend -->
   <?php if (count($balance_logs) >= 2): ?>

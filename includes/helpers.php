@@ -163,13 +163,17 @@ function render_pager(int $page, int $total_items, int $page_size = PAGE_SIZE): 
 
 // ── Savings goal ───────────────────────────────────────────────────────────
 
-/** Renders a progress card for the active savings goal against $current_amount. Silent no-op if $goal is null. */
-function render_goal_progress(?array $goal, int $current_amount): void {
+/** Renders a progress card for the active savings goal against $current_amount. Silent no-op if $goal is null.
+ *  $label is an optional small eyebrow tag (e.g. 'My Goal' vs 'Family Goal') shown above the title. */
+function render_goal_progress(?array $goal, int $current_amount, string $label = ''): void {
     if (!$goal) return;
     $target  = (int) $goal['target_amount'];
     $pct     = $target > 0 ? min(100, (int) round($current_amount / $target * 100)) : 0;
     ?>
     <div class="bg-white rounded-2xl shadow-sm p-4">
+      <?php if ($label !== ''): ?>
+      <p class="text-[10px] font-bold text-primary uppercase tracking-wide mb-1"><?= htmlspecialchars($label) ?></p>
+      <?php endif; ?>
       <div class="flex items-center justify-between mb-2">
         <p class="font-semibold text-slate-700 text-sm"><?= htmlspecialchars($goal['title']) ?></p>
         <p class="text-xs font-bold text-primary"><?= $pct ?>%</p>

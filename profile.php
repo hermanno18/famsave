@@ -32,12 +32,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'passw
     redirect('/profile.php');
 }
 
+// Handle personal savings goal
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'set_personal_goal') {
+    verify_csrf();
+    $title  = trim($_POST['goal_title'] ?? '');
+    $target = (int) ($_POST['goal_target'] ?? 0);
+
+    if ($title === '' || $target <= 0) {
+        flash('error', 'Goal needs a title and a target amount above zero.');
+    } else {
+        set_savings_goal($title, $target, $user['id'], $user['id']);
+        flash('success', 'Your savings goal is set!');
+    }
+    redirect('/profile.php');
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'clear_personal_goal') {
+    verify_csrf();
+    clear_savings_goal($user['id']);
+    flash('success', 'Your savings goal was cleared.');
+    redirect('/profile.php');
+}
+
 // All transactions for this user
 $txs = db_rows(
     "SELECT * FROM transactions WHERE user_id=? ORDER BY id DESC",
     [$user['id']]
 );
-$balance = user_balance((int)$user['id']);
+$balance    = user_balance((int)$user['id']);
+$my_goal    = active_goal_for_user((int)$user['id']);
 
 page_start(t('my_profile'), 'profile');
 ?>
@@ -86,6 +109,51 @@ page_start(t('my_profile'), 'profile');
         <?= t('save') ?>
       </button>
     </form>
+  </div>
+
+  <!-- My savings goal -->
+  <div class="bg-white rounded-2xl shadow-sm p-5">
+    <p class="font-semibold text-slate-700 text-sm mb-4">
+      <?= $my_goal ? 'My Savings Goal' : 'Set a Personal Savings Goal' ?>
+    </p>
+    <?php if ($my_goal): ?>
+    <?php render_goal_progress($my_goal, $balance); ?>
+    <?php endif; ?>
+    <form method="POST" action="" class="space-y-3 <?= $my_goal ? 'mt-4' : '' ?>">
+      <?= csrf_input() ?>
+      <input type="hidden" name="action" value="set_personal_goal">
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Goal Title</label>
+        <input type="text" name="goal_title" required maxlength="80"
+               value="<?= $my_goal ? htmlspecialchars($my_goal['title']) : '' ?>"
+               placeholder="e.g. New Bike"
+               class="w-full px-4 py-2.5 rounded-xl border border-slate-200
+                      focus:outline-none focus:ring-2 focus:ring-primary text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Target Amount (<?= CURRENCY ?>)</label>
+        <input type="number" name="goal_target" min="1" required
+               value="<?= $my_goal ? (int)$my_goal['target_amount'] : '' ?>"
+               class="w-full px-4 py-2.5 rounded-xl border border-slate-200
+                      focus:outline-none focus:ring-2 focus:ring-primary text-sm font-semibold">
+      </div>
+      <button type="submit"
+              class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2.5 rounded-xl
+                     transition active:scale-95 text-sm">
+        <?= $my_goal ? 'Update Goal' : 'Set Goal' ?>
+      </button>
+    </form>
+    <?php if ($my_goal): ?>
+    <form method="POST" action="" class="mt-2">
+      <?= csrf_input() ?>
+      <input type="hidden" name="action" value="clear_personal_goal">
+      <button type="submit"
+              class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl
+                     transition active:scale-95 text-sm">
+        Clear Goal
+      </button>
+    </form>
+    <?php endif; ?>
   </div>
 
   <!-- Change password -->
