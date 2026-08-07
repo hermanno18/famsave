@@ -162,6 +162,8 @@ function page_end(string $active = ''): void {
             '/deposit.php', 'deposit'],
         ['nav_withdraw', 'M19 14l-7 7m0 0l-7-7m7 7V3',
             '/withdraw.php', 'withdraw'],
+        ['nav_goals',    'M3 3v18h18M7 15l3-3 3 3 5-6',
+            '/goals.php', 'goals'],
         ['nav_profile',  'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
             '/profile.php', 'profile'],
     ];
@@ -174,6 +176,8 @@ function page_end(string $active = ''): void {
             '/admin/withdrawals.php', 'withdrawals'],
         ['nav_balance',     'M3 6l3 1m0 0l-3 9a5 5 0 006.9 4.9L9 7m0 0l6 2m-6-2L9 21m6-14l3-1m-3 1l-3 9a5 5 0 006.9 4.9L15 7',
             '/admin/balance.php', 'balance'],
+        ['nav_goals',       'M3 3v18h18M7 15l3-3 3 3 5-6',
+            '/admin/goals.php', 'goals'],
         ['nav_users',       'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5 5 0 019.288 0',
             '/admin/users.php', 'users'],
     ];

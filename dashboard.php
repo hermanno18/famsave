@@ -4,8 +4,14 @@ $user = require_login();
 
 $balance    = user_balance((int)$user['id']);
 $main_bal   = main_balance();
-$goal       = active_goal();
-$my_goal    = active_goal_for_user((int)$user['id']);
+
+// Personal goals: feature the one closest to completion, plus anything the member starred themselves.
+$my_active_goals = list_active_goals((int)$user['id']);
+$my_featured     = featured_goals($my_active_goals, $balance);
+
+// Family goals: only ones the admin explicitly chose to pin to THIS member's dashboard.
+$family_goals = pinned_family_goals_for_user((int)$user['id']);
+
 $balance_logs = db_rows("SELECT * FROM balance_logs ORDER BY id DESC LIMIT 20");
 $recent_txs = db_rows(
     "SELECT * FROM transactions WHERE user_id=? ORDER BY id DESC LIMIT 5",
@@ -52,9 +58,21 @@ page_start(t('nav_home'), 'home');
     </div>
   </div>
 
-  <?php render_goal_progress($my_goal, $balance, 'My Goal'); ?>
+  <?php foreach ($my_featured as $g): ?>
+  <?php render_goal_card($g, $balance, 'My Goal'); ?>
+  <?php endforeach; ?>
 
-  <?php render_goal_progress($goal, $main_bal, 'Family Goal'); ?>
+  <?php foreach ($family_goals as $g): ?>
+  <?php render_goal_card($g, $main_bal, 'Family Goal'); ?>
+  <?php endforeach; ?>
+
+  <?php if (empty($my_featured)): ?>
+  <a href="<?= APP_URL ?>/goals.php"
+     class="block bg-white rounded-2xl shadow-sm p-4 text-center text-sm text-primary font-semibold
+            border-2 border-dashed border-primary/20 hover:border-primary/40 transition">
+    + Set your first savings goal
+  </a>
+  <?php endif; ?>
 
   <!-- Family balance trend -->
   <?php if (count($balance_logs) >= 2): ?>

@@ -11,6 +11,7 @@ function t(string $key): string {
         'nav_withdrawals'   => 'Withdrawals',
         'nav_balance'       => 'Balance',
         'nav_users'         => 'Members',
+        'nav_goals'         => 'Goals',
         // Auth
         'login'             => 'Log In',
         'logout'            => 'Log Out',

@@ -161,29 +161,90 @@ function render_pager(int $page, int $total_items, int $page_size = PAGE_SIZE): 
     <?php
 }
 
-// ── Savings goal ───────────────────────────────────────────────────────────
+// ── Savings goals ───────────────────────────────────────────────────────────
 
-/** Renders a progress card for the active savings goal against $current_amount. Silent no-op if $goal is null.
- *  $label is an optional small eyebrow tag (e.g. 'My Goal' vs 'Family Goal') shown above the title. */
-function render_goal_progress(?array $goal, int $current_amount, string $label = ''): void {
+/**
+ * Renders a single goal card. Silent no-op if $goal is null.
+ *
+ * $label     — optional eyebrow tag above the title (e.g. 'My Goal', 'Family Goal').
+ * $actions   — when true, renders pin/complete/reopen/delete buttons (each its own tiny form).
+ *              Leave false for read-only cards (dashboard widgets).
+ * $csrf      — CSRF token, required whenever $actions is true.
+ */
+function render_goal_card(?array $goal, int $current_amount, string $label = '', bool $actions = false, string $csrf = ''): void {
     if (!$goal) return;
-    $target  = (int) $goal['target_amount'];
-    $pct     = $target > 0 ? min(100, (int) round($current_amount / $target * 100)) : 0;
+    $target       = (int) $goal['target_amount'];
+    $pct          = goal_percent($goal, $current_amount);
+    $is_done      = $goal['status'] === 'completed';
+    $is_reachable = !$is_done && $pct >= 100;
+    $bar_color    = $is_done || $is_reachable ? 'bg-emerald-500' : 'bg-primary';
     ?>
     <div class="bg-white rounded-2xl shadow-sm p-4">
-      <?php if ($label !== ''): ?>
-      <p class="text-[10px] font-bold text-primary uppercase tracking-wide mb-1"><?= htmlspecialchars($label) ?></p>
-      <?php endif; ?>
+      <div class="flex items-center justify-between mb-1">
+        <?php if ($label !== ''): ?>
+        <p class="text-[10px] font-bold text-primary uppercase tracking-wide"><?= htmlspecialchars($label) ?></p>
+        <?php else: ?>
+        <span></span>
+        <?php endif; ?>
+        <?php if ($goal['is_pinned']): ?>
+        <span class="text-[10px] font-bold text-amber-500 uppercase tracking-wide">Pinned</span>
+        <?php endif; ?>
+      </div>
       <div class="flex items-center justify-between mb-2">
         <p class="font-semibold text-slate-700 text-sm"><?= htmlspecialchars($goal['title']) ?></p>
-        <p class="text-xs font-bold text-primary"><?= $pct ?>%</p>
+        <p class="text-xs font-bold <?= $is_done || $is_reachable ? 'text-emerald-600' : 'text-primary' ?>"><?= $pct ?>%</p>
       </div>
       <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-        <div class="h-full bg-primary rounded-full transition-all" style="width: <?= $pct ?>%"></div>
+        <div class="h-full <?= $bar_color ?> rounded-full transition-all" style="width: <?= $pct ?>%"></div>
       </div>
       <p class="text-xs text-slate-400 mt-1.5">
         <?= fmt_money($current_amount) ?> of <?= fmt_money($target) ?>
       </p>
+      <?php if ($is_done): ?>
+      <p class="text-xs text-emerald-600 font-semibold mt-2">Completed <?= fmt_date($goal['completed_at']) ?></p>
+      <?php elseif ($is_reachable): ?>
+      <p class="text-xs text-emerald-600 font-semibold mt-2">You have enough saved to reach this goal!</p>
+      <?php endif; ?>
+
+      <?php if ($actions): ?>
+      <div class="mt-3 flex gap-2 flex-wrap">
+        <?php if (!$is_done): ?>
+        <form method="POST" action="" class="inline">
+          <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+          <input type="hidden" name="action" value="toggle_pin">
+          <input type="hidden" name="goal_id" value="<?= $goal['id'] ?>">
+          <button type="submit" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold px-3 py-1.5 rounded-lg transition">
+            <?= $goal['is_pinned'] ? 'Unpin' : 'Pin to Dashboard' ?>
+          </button>
+        </form>
+        <form method="POST" action="" class="inline">
+          <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+          <input type="hidden" name="action" value="complete_goal">
+          <input type="hidden" name="goal_id" value="<?= $goal['id'] ?>">
+          <button type="submit" class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-semibold px-3 py-1.5 rounded-lg transition">
+            Mark Complete
+          </button>
+        </form>
+        <?php else: ?>
+        <form method="POST" action="" class="inline">
+          <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+          <input type="hidden" name="action" value="reopen_goal">
+          <input type="hidden" name="goal_id" value="<?= $goal['id'] ?>">
+          <button type="submit" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold px-3 py-1.5 rounded-lg transition">
+            Reopen
+          </button>
+        </form>
+        <?php endif; ?>
+        <form method="POST" action="" class="inline" onsubmit="return confirm('<?= t('confirm_action') ?>');">
+          <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+          <input type="hidden" name="action" value="delete_goal">
+          <input type="hidden" name="goal_id" value="<?= $goal['id'] ?>">
+          <button type="submit" class="text-xs bg-red-50 hover:bg-red-100 text-red-500 font-semibold px-3 py-1.5 rounded-lg transition">
+            Delete
+          </button>
+        </form>
+      </div>
+      <?php endif; ?>
     </div>
     <?php
 }
