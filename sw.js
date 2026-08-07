@@ -1,4 +1,4 @@
-const CACHE = 'famsave-v1';
+const CACHE = 'famsave-v2';
 const OFFLINE_URLS = ['/login.php'];
 
 self.addEventListener('install', e => {

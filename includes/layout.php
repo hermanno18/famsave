@@ -42,6 +42,7 @@ tailwind.config = {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+  [x-cloak] { display: none !important; }
   body { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; }
   .safe-bottom { padding-bottom: max(4.5rem, env(safe-area-inset-bottom)); }
   @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
@@ -78,7 +79,8 @@ tailwind.config = {
             d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
         </svg>
         <?php if ($unread > 0): ?>
-        <span class="absolute -top-0.5 -right-0.5 bg-accent text-white text-[10px] font-bold
+        <span data-unread-badge
+              class="absolute -top-0.5 -right-0.5 bg-accent text-white text-[10px] font-bold
                       w-4 h-4 flex items-center justify-center rounded-full">
           <?= min($unread, 9) ?><?= $unread > 9 ? '+' : '' ?>
         </span>
@@ -216,15 +218,22 @@ function appShell() {
         navigator.serviceWorker.register('<?= APP_URL ?>/sw.js').catch(() => {});
       }
     },
-    markRead() {
-      fetch('<?= APP_URL ?>/api/action.php', {method:'POST',
-        headers:{'X-Requested-With':'XMLHttpRequest'},
-        body: new URLSearchParams({csrf:'<?= csrf_token() ?>', action:'mark_read'})
-      });
-      document.querySelectorAll('.bg-teal-50').forEach(el => el.classList.remove('bg-teal-50'));
-      document.querySelectorAll('.bg-primary').forEach(el => {
-        el.classList.remove('bg-primary'); el.classList.add('bg-slate-200');
-      });
+    async markRead() {
+      try {
+        const r = await fetch('<?= APP_URL ?>/api/action.php', {method:'POST',
+          headers:{'X-Requested-With':'XMLHttpRequest'},
+          body: new URLSearchParams({csrf:'<?= csrf_token() ?>', action:'mark_read'})
+        });
+        const d = await r.json();
+        if (!d.ok) { alert(d.error || 'Could not mark notifications read.'); return; }
+        document.querySelectorAll('.bg-teal-50').forEach(el => el.classList.remove('bg-teal-50'));
+        document.querySelectorAll('.bg-primary').forEach(el => {
+          el.classList.remove('bg-primary'); el.classList.add('bg-slate-200');
+        });
+        document.querySelectorAll('[data-unread-badge]').forEach(el => el.remove());
+      } catch (e) {
+        alert('Network error — could not reach the server.');
+      }
     }
   }
 }

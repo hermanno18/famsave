@@ -165,6 +165,43 @@ page_start(t('nav_users'), 'users');
   <?php render_pager($page, $total_members); ?>
 </div>
 
+<!-- Reset-password result modal -->
+<div x-data="{ show:false, password:'', copied:false }"
+     @show-password-modal.window="password = $event.detail; show = true; copied = false"
+     x-show="show" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-slate-900/50" @click="show=false"></div>
+  <div class="relative bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 fade-up">
+    <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
+      <svg class="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </div>
+    <h3 class="text-center font-bold text-slate-800 text-lg mb-1">Password Reset</h3>
+    <p class="text-center text-sm text-slate-500 mb-4">
+      Share this temporary password with the member. They'll be asked to change it on first login.
+    </p>
+    <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-4">
+      <code class="flex-1 font-mono font-bold text-slate-800 text-center tracking-wide" x-text="password"></code>
+      <button @click="navigator.clipboard.writeText(password); copied = true; setTimeout(() => copied = false, 1500)"
+              class="text-primary hover:text-primary-dark flex-shrink-0 p-1" title="Copy">
+        <svg x-show="!copied" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+        <svg x-show="copied" x-cloak class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+      </button>
+    </div>
+    <p x-show="copied" x-cloak class="text-center text-xs text-emerald-600 font-medium -mt-2 mb-4">Copied!</p>
+    <button @click="show=false"
+            class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl
+                   transition active:scale-95">
+      Done
+    </button>
+  </div>
+</div>
+
 <script>
 function userAction(id, csrf) {
   return {
@@ -184,7 +221,7 @@ function userAction(id, csrf) {
         body: new URLSearchParams({ csrf, action:'reset_password', id })
       });
       const d = await r.json();
-      if (d.ok) alert('New temp password: ' + d.temp_password + '\n\nThey will be asked to change it on next login.');
+      if (d.ok) window.dispatchEvent(new CustomEvent('show-password-modal', { detail: d.temp_password }));
       else alert(d.error);
     }
   }
