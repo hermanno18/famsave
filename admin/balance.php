@@ -173,6 +173,10 @@ page_start(t('nav_balance'), 'balance');
       <canvas id="balanceChart"></canvas>
     </div>
   </div>
+  <?php elseif (count($logs) === 1): ?>
+  <div class="bg-white rounded-2xl shadow-sm p-4 text-center text-slate-400 text-sm">
+    Log one more balance update to unlock the trend chart here.
+  </div>
   <?php endif; ?>
 
   <!-- Balance history -->
